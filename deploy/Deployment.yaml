@@ -1,0 +1,61 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: admiteed
+  namespace: default
+spec:
+  strategy:
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 50%
+    type: RollingUpdate
+  selector:
+    matchLabels:
+      app: admiteed
+  template:
+    metadata:
+      labels:
+        app: admiteed
+    spec:
+      serviceAccount: admiteed
+      containers:
+      - name: admiteed
+        image: docker.example.com/admiteed:v0.1.0
+        imagePullPolicy: IfNotPresent
+        args:
+        - /admiteed
+        - --server-bind-address=0.0.0.0
+        - --server-bind-port=443
+        - --tls-cert=/etc/certs/cert.pem
+        - --tls-key=/etc/certs/key.pem
+        - --redis-address=10.10.10.10
+        - --redis-port=6379
+        - --redis-db=0
+        - --redis-password=redispassword
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 443
+            scheme: HTTPS
+          periodSeconds: 30
+          timeoutSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /healthz
+            port: 443
+            scheme: HTTPS
+          periodSeconds: 30
+          timeoutSeconds: 10
+        volumeMounts:
+        - name: certs
+          mountPath: /etc/certs
+          readOnly: true
+      volumes:
+      - name: certs
+        secret:
+          secretName: admiteed
+      tolerations:
+      - effect: NoSchedule
+        key: node.kubernetes.io/unschedulable
+      - effect: NoSchedule
+        key: node-role.kubernetes.io/master

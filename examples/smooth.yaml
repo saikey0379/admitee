@@ -1,18 +1,3 @@
-# admitee: A kubernetes admission tool for smooth updates
-Effective for websocket
-
-## Getting Started
-### image build 
-``` shell
-# go build -o admiteed cmd/admiteed/main.go
-# docker build -t docker.example.com/admiteed:v0.1.0 .
-```
-### kubernetes set
-``` shell
-# kubectl apply -f deploy/
-```
-### deployment usage example
-``` yaml
 apiVersion: validating.example.com/v1alpha1
 kind: Smooth
 metadata:
@@ -38,4 +23,3 @@ spec:
       path: "/empty"
       method: "get"
       expect: "success"
-```
