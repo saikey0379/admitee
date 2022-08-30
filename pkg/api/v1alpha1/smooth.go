@@ -7,6 +7,8 @@ import (
 
 const (
 	DefaultInterval = "60"
+	DefaultPort     = 80
+	DefaultMethod   = "get"
 )
 
 type Rule struct {

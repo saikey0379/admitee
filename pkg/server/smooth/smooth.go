@@ -185,7 +185,10 @@ func (sm *SmoothManager) SmoothConfigExec(pod corev1.Pod) (bool, string) {
 			glog.Errorf("FAILURE: Port OutOfRange 0~65535 [%v]", rule.Port)
 			return false, fmt.Sprintf("FAILURE: Port OutOfRange 0~65535 [%v]", rule.Port)
 		} else if rule.Port == 0 {
-			rule.Port = 80
+			rule.Port = int(pod.Spec.Containers[0].Ports[0].ContainerPort)
+			if rule.Port == 0 {
+				rule.Port = v1alpha1.DefaultPort
+			}
 		}
 
 		if rule.Path == "" {
@@ -200,7 +203,7 @@ func (sm *SmoothManager) SmoothConfigExec(pod corev1.Pod) (bool, string) {
 		}
 
 		if rule.Method == "" {
-			rule.Method = "get"
+			rule.Method = v1alpha1.DefaultMethod
 		}
 
 		var respStr string

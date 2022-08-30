@@ -13,11 +13,17 @@ rules:
   - '*'
 - apiGroups:
   - apps
-  - extensions
   resources:
   - daemonsets
-  - replicaset
-  - deployment
+  - replicasets
+  - deployments
+  verbs:
+  - get
+  - list
+- apiGroups:
+  - validating.example.com
+  resources:
+  - smooths
   verbs:
   - get
   - list
