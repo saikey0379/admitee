@@ -1,21 +1,21 @@
 package main
 
 import (
-	"os"
-	"fmt"
-	"flag"
 	"context"
+	"flag"
+	"fmt"
+	"os"
 
 	"admitee/pkg/server"
-	"admitee/pkg/server/options"
 	"admitee/pkg/server/config"
+	"admitee/pkg/server/options"
 
-	"k8s.io/client-go/rest"
-	"k8s.io/client-go/dynamic"
-	"k8s.io/client-go/kubernetes"
-	"golang.org/x/sync/errgroup"
 	"github.com/golang/glog"
 	"github.com/spf13/cobra"
+	"golang.org/x/sync/errgroup"
+	"k8s.io/client-go/dynamic"
+	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/manager/signals"
 )
 
@@ -72,7 +72,6 @@ func Run(ctx context.Context, opts *options.Options) error {
 		glog.Errorf("FAILURE: NewClientRedis[%v]", err)
 	}
 
-
 	eg.Go(func() error {
 		// Start admitee server
 		serverConfig := config.NewServerConfig()
@@ -118,4 +117,3 @@ func NewClientKubeSet() (*kubernetes.Clientset, error) {
 	}
 	return kubeClient, nil
 }
-

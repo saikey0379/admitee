@@ -25,7 +25,7 @@ func (sm *SmoothManager) VerifyDeletePodDeployment(namespace string, project str
 		return true, "Deployment Replicas[" + strconv.Itoa(int(deployment.Status.Replicas)) + "]"
 	}
 
-	if int(deployment.Status.Replicas) - countUpdate <= 1 {
+	if int(deployment.Status.Replicas)-countUpdate <= 1 {
 		return false, "Deployment Replicas/Smoothing[" + strconv.Itoa(int(deployment.Status.Replicas)) + "/" + strconv.Itoa(countUpdate) + "]"
 	}
 

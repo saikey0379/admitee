@@ -22,9 +22,9 @@ type Rule struct {
 
 type SmoothSpec struct {
 	// ScaleTargetRef is the reference to the workload that should be scaled.
-	TargetRef      autoscalingv2.CrossVersionObjectReference `json:"targetRef"`
-	Rules          []Rule                                    `json:"rules"`
-	Interval       int                                       `json:"interval"`
+	TargetRef autoscalingv2.CrossVersionObjectReference `json:"targetRef"`
+	Rules     []Rule                                    `json:"rules"`
+	Interval  int                                       `json:"interval"`
 }
 
 type Smooth struct {

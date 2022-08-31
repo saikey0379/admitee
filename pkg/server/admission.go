@@ -96,9 +96,9 @@ func (s *apiServer) ReturnAdmissionResponse(url string, ar *v1beta1.AdmissionRev
 
 func (s *apiServer) DeamonSmooth() {
 	var sm = &smooth.SmoothManager{
-		ClientKubeSet:     s.clientKubeSet,
-		ClientRedis:       s.clientRedis,
-		Ctx:               context.Background(),
+		ClientKubeSet: s.clientKubeSet,
+		ClientRedis:   s.clientRedis,
+		Ctx:           context.Background(),
 	}
 	go sm.LoopSmooth()
 	go sm.LoopDelete()

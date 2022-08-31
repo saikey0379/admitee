@@ -1,13 +1,13 @@
 package utils
 
 import (
+	"bytes"
 	"fmt"
+	"io/ioutil"
 	"net"
 	"net/http"
-	"time"
-	"bytes"
 	"strings"
-	"io/ioutil"
+	"time"
 )
 
 func RestApiGet(url string) (string, error) {
