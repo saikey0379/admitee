@@ -153,8 +153,11 @@ func (sm *SmoothManager) EnterSmoothProcess(ar *v1beta1.AdmissionReview) *v1beta
 
 func (sm *SmoothManager) SmoothConfigExec(pod corev1.Pod) (bool, string) {
 	smConfig, err := sm.GetSmoothConfig(pod)
-	if smConfig == nil || err != nil {
+	if err != nil {
 		return false, err.Error()
+	}
+	if smConfig == nil {
+		return true, fmt.Sprintf("Smooth Config NOT SET [%s/%s]", pod.Namespace, pod.Name)
 	}
 
 	var key = "ADMITEE_SMOOTH_POD_" + pod.Namespace + "_" + pod.Name
