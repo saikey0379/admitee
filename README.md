@@ -42,6 +42,7 @@ spec:
     apiVersion: apps/v1
     kind: Deployment
     name: test
+  interval: 10
   rules:
     - address: "manage.example.com"
       path: "/UpdateIsLock"
@@ -67,18 +68,23 @@ test            test            Deployment      15h
 ```
 ### smoothing logs with pod delete operation
 ```shell
-I0830 14:59:30.744588       1 smooth.go:90] MESSAGE: Smoothing Target [default/Deployment/test]
-I0830 14:59:30.744634       1 smooth.go:95] MESSAGE: Smoothing OwnerReference [default/ReplicaSet/test-5b79fff4c7]
-I0830 14:59:30.745355       1 smooth.go:116] MESSAGE: Target [default/Deployment/test] Smoothing Count [0]
-I0830 14:59:30.757499       1 smooth.go:176] SUCCESS: SET [ADMITEE_SMOOTH_POD_default_test-5b79fff4c7-wr2z5:default_test-5b79fff4c7_60_1661842770_0]
-I0830 14:59:30.765155       1 smooth.go:221] MESSAGE: Rule [/isolation] Reason [Post "http://10.244.44.55:8080/isolation": dial tcp 10.244.44.55:80: connect: connection refused]
-I0830 14:59:30.772598       1 smooth.go:221] MESSAGE: Rule [/empty] Reason [Get "http://10.244.44.55:8080/empty": dial tcp 10.244.44.55:8080: connect: connection refused]
-I0830 14:59:30.773539       1 smooth.go:145] SUCCESS: SET [ADMITEE_SMOOTH_DELETE_default_test-5b79fff4c7-wr2z5:1]
-I0830 14:59:30.773564       1 smooth.go:150] MESSAGE: POD [default/test-5b79fff4c7-wr2z5], Delete [true], Reason [{Post "http://10.244.44.55:8080/isolation": dial tcp 10.244.44.55:8080: connect: connection refused},{Get "http://10.244.44.55:8080/empty": dial tcp 10.244.44.55:8080: connect: connection refused}]
+I0831 14:13:59.392433       1 server.go:65] Start to listening on http address: 0.0.0.0:443
+I0831 14:15:23.103835       1 smooth.go:90] MESSAGE: Smoothing Target [default/Deployment/test] POD [test-756777c86c-qdtm7]
+I0831 14:15:23.104444       1 smooth.go:115] MESSAGE: Target [default/Deployment/test] Smoothing Count [0]
+I0831 14:15:23.104598       1 smooth.go:90] MESSAGE: Smoothing Target [default/Deployment/test] POD [test-756777c86c-rg4d2]
+I0831 14:15:23.137168       1 smooth.go:172] SUCCESS: SET [ADMITEE_SMOOTH_POD_default_test-756777c86c-qdtm7:default_test-756777c86c_10_1661926523_0]
 ...
+I0831 14:15:23.141473       1 smooth.go:137] MESSAGE: POD [default/test-756777c86c-qdtm7], Delete [false], Reason [{post 8080/isolation success},{get 8080/empty false}]
+I0831 14:15:24.125969       1 deployment.go:39] MESSAGE: Deployment[test] SmoothCount: 1, MaxUnavailableCount: 2, DesiredNumber：4, MaxUnavailable:50%
+I0831 14:15:24.145855       1 smooth.go:172] SUCCESS: SET [ADMITEE_SMOOTH_POD_default_test-756777c86c-rg4d2:default_test-756777c86c_10_1661926524_0]
+I0831 14:15:24.150343       1 smooth.go:137] MESSAGE: POD [default/test-756777c86c-rg4d2], Delete [false], Reason [{post 8080/isolation success},{get 8080/empty false}]
+I0831 14:15:24.202450       1 smooth.go:137] MESSAGE: POD [default/test-756777c86c-qdtm7], Delete [false], Reason [{post 8080/isolation success},{get 8080/empty false}]
 ...
-I0830 15:00:04.020087       1 delete_loop.go:135] SUCCESS: DEL[ADMITEE_SMOOTH_POD_default_test-5b79fff4c7-wr2z5]
-I0830 15:00:04.020325       1 delete_loop.go:142] SUCCESS: DEL[ADMITEE_SMOOTH_DELETE_default_test-5b79fff4c7-wr2z5]
- 
+I0831 14:16:05.892022       1 smooth.go:137] MESSAGE: POD [default/test-756777c86c-rg4d2], Delete [true], Reason [{post 8080/isolation success},{get 8080/empty success}]
+I0831 14:16:05.892640       1 smooth.go:145] SUCCESS: SET [ADMITEE_SMOOTH_DEL_default_test-756777c86c-rg4d2:1]
+I0831 14:16:05.917763       1 smooth.go:137] MESSAGE: POD [default/test-756777c86c-rg4d2], Delete [true], Reason [{post 8080/isolation success},{get 8080/empty success}]
+I0831 14:16:05.943098       1 smooth.go:137] MESSAGE: POD [default/test-756777c86c-rg4d2], Delete [true], Reason [{post 8080/isolation success},{get 8080/empty success}]
+I0831 14:16:06.551268       1 loop_del.go:135] SUCCESS: DEL[ADMITEE_SMOOTH_POD_default_test-756777c86c-rg4d2]
+I0831 14:16:06.551510       1 loop_del.go:142] SUCCESS: DEL[ADMITEE_SMOOTH_DEL_default_test-756777c86c-rg4d2]
 ```
 ### Pod delete 

@@ -8,6 +8,7 @@ spec:
     apiVersion: apps/v1
     kind: Deployment
     name: test
+  interval: 10
   rules:
     - address: "manage.example.com"
       path: "/UpdateIsLock"

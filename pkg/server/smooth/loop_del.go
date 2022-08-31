@@ -63,7 +63,7 @@ func (sm *SmoothManager) LoopSmooth() {
 				}
 
 				if errGET != nil || (errGET == nil && errDEL == nil) || count*interval >= 3600 {
-					n, _ := sm.ClientRedis.Client.Exists(sm.ClientRedis.Ctx, "ADMITEE_SMOOTH_DELETE_"+namespace+"_"+podName).Result()
+					n, _ := sm.ClientRedis.Client.Exists(sm.ClientRedis.Ctx, "ADMITEE_SMOOTH_DEL_"+namespace+"_"+podName).Result()
 					if n == 0 {
 						//删除RDB记录
 						err := sm.ClientRedis.Client.Del(sm.ClientRedis.Ctx, keyPOD).Err()
@@ -85,7 +85,7 @@ func (sm *SmoothManager) LoopSmooth() {
 }
 
 func (sm *SmoothManager) LoopDelete() {
-	var reg = "ADMITEE_SMOOTH_DELETE_*"
+	var reg = "ADMITEE_SMOOTH_DEL_*"
 	for {
 		key := "ADMITEE_SMOOTH_LOCK_LOOP_DELETE"
 		for {

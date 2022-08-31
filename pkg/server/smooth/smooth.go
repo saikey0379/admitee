@@ -92,7 +92,6 @@ func (sm *SmoothManager) EnterSmoothProcess(ar *v1beta1.AdmissionReview) *v1beta
 		or := pod.GetOwnerReferences()
 		nameOwnerReference := or[0].Name
 		kindOwnerReference := or[0].Kind
-		glog.Infof("MESSAGE: Smoothing OwnerReference [%s]", namespace+"/"+kindOwnerReference+"/"+nameOwnerReference)
 		key := "LOCK_" + kindOwnerReference + "_" + namespace + "_" + nameOwnerReference
 		for {
 			boolLock := sm.ClientRedis.Lock(key)
@@ -135,8 +134,9 @@ func (sm *SmoothManager) EnterSmoothProcess(ar *v1beta1.AdmissionReview) *v1beta
 		}
 	}
 
+	glog.Infof("MESSAGE: POD [%v], Delete [%v], Reason [%v]", req.Namespace+"/"+req.Name, allowed, reason)
 	if allowed {
-		key := "ADMITEE_SMOOTH_DELETE_" + req.Namespace + "_" + req.Name
+		key := "ADMITEE_SMOOTH_DEL_" + req.Namespace + "_" + req.Name
 		vauleDelete, _ := sm.ClientRedis.Client.Get(sm.ClientRedis.Ctx, key).Result()
 		if vauleDelete == "" {
 			value := "1"
@@ -146,8 +146,6 @@ func (sm *SmoothManager) EnterSmoothProcess(ar *v1beta1.AdmissionReview) *v1beta
 			}
 		}
 	}
-
-	glog.Infof("MESSAGE: POD [%v], Delete [%v], Reason [%v]", req.Namespace+"/"+req.Name, allowed, reason)
 	return returnAdmissionResponse(allowed, reason)
 }
 
@@ -156,9 +154,6 @@ func (sm *SmoothManager) SmoothConfigExec(pod corev1.Pod) (bool, string) {
 	if err != nil {
 		return false, err.Error()
 	}
-	if smConfig == nil {
-		return true, fmt.Sprintf("Smooth Config NOT SET [%s/%s]", pod.Namespace, pod.Name)
-	}
 
 	var key = "ADMITEE_SMOOTH_POD_" + pod.Namespace + "_" + pod.Name
 	vaulePOD, _ := sm.ClientRedis.Client.Get(sm.ClientRedis.Ctx, key).Result()
@@ -166,18 +161,22 @@ func (sm *SmoothManager) SmoothConfigExec(pod corev1.Pod) (bool, string) {
 		_, err := sm.ClientKubeSet.CoreV1().Pods(pod.Namespace).Get(sm.Ctx, pod.Name, metav1.GetOptions{})
 		if err == nil {
 			var interval string
-			if smConfig.Spec.Interval > 0 {
+			if smConfig != nil && smConfig.Spec.Interval > 0 {
 				interval = strconv.Itoa(smConfig.Spec.Interval)
 			} else {
 				interval = v1alpha1.DefaultInterval
 			}
-
 			value := pod.Namespace + "_" + pod.GetOwnerReferences()[0].Name + "_" + interval + "_" + strconv.FormatInt(time.Now().Unix(), 10) + "_0"
 			err := sm.ClientRedis.Client.SetNX(sm.ClientRedis.Ctx, key, value, 0).Err()
 			if err == nil {
 				glog.Infof("SUCCESS: SET [%s:%s]", key, value)
 			}
+
 		}
+	}
+
+	if smConfig == nil {
+		return true, fmt.Sprintf("Smooth Config NOT SET [%s/%s]", pod.Namespace, pod.Name)
 	}
 
 	var allowed = true
@@ -223,11 +222,9 @@ func (sm *SmoothManager) SmoothConfigExec(pod corev1.Pod) (bool, string) {
 
 		if err != nil {
 			reasons = append(reasons, "{"+err.Error()+"}")
-			glog.Infof("MESSAGE: Rule [%s] Reason [%v]", rule.Path, err)
 		} else {
 			reasons = append(reasons, "{"+rule.Method+" "+strconv.Itoa(rule.Port)+rule.Path+" "+respStr+"}")
 			if respStr == strings.TrimSpace(rule.Expect) {
-				glog.Infof("MESSAGE: Rule [%s] Reason [%s]", rule.Path, respStr)
 			} else {
 				allowed = false
 			}
@@ -291,7 +288,7 @@ func (sm *SmoothManager) GetTarget(pod corev1.Pod) (targetKind string, targetNam
 		if len(rs.GetOwnerReferences()) == 1 {
 			return rs.OwnerReferences[0].Kind, rs.OwnerReferences[0].Name, err
 		} else if len(rs.GetOwnerReferences()) < 1 {
-			return "", "", fmt.Errorf("FAILURE: No Target Matched")
+			return orKind, orName, err
 		} else {
 			return "", "", fmt.Errorf("FAILURE: Too Many Target Matched")
 		}

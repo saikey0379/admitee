@@ -14,6 +14,12 @@ func (sm *SmoothManager) VerifyDeletePodDaemonSet(namespace string, project stri
 		glog.Errorf("FAILURE: Get DaemonSet[%v]", err)
 		return false, "DaemonSet GET[" + err.Error() + "]"
 	}
+
+	//无可用副本，允许删除
+	if dsdetail.Status.NumberAvailable == 0 {
+		return true, "DaemonSet NumberAvailable[" + strconv.Itoa(int(dsdetail.Status.NumberAvailable)) + "]"
+	}
+
 	maxuvfloat64, err := strconv.ParseFloat(strings.Replace(dsdetail.Spec.UpdateStrategy.RollingUpdate.MaxUnavailable.StrVal, "%", "", -1), 64)
 	if err != nil {
 		glog.Errorf("FAILURE: Can't encode maxuvfloat64[%v]", err)
@@ -24,17 +30,7 @@ func (sm *SmoothManager) VerifyDeletePodDaemonSet(namespace string, project stri
 	if countMaxuav == 0 {
 		countMaxuav = 1
 	}
-	glog.Infof("MESSAGE: DaemonSet[%s] MaxUnavailableCount: %v，DesiredNumber：%v, MaxUnavailable:%v", project, countMaxuav, dsdetail.Status.DesiredNumberScheduled, dsdetail.Spec.UpdateStrategy.RollingUpdate.MaxUnavailable.StrVal)
-
-	//无可用副本，允许删除
-	if dsdetail.Status.NumberAvailable == 0 {
-		return true, "DaemonSet NumberAvailable[" + strconv.Itoa(int(dsdetail.Status.NumberAvailable)) + "]"
-	}
-
-	//单副本，允许删除
-	if dsdetail.Status.DesiredNumberScheduled == 1 {
-		return true, "DaemonSet DesiredNumberScheduled[" + strconv.Itoa(int(dsdetail.Status.DesiredNumberScheduled)) + "]"
-	}
+	glog.Infof("MESSAGE: DaemonSet[%s] SmoothCount: %v, MaxUnavailableCount: %v, DesiredNumber：%v, MaxUnavailable:%v", project, countUpdate, countMaxuav, dsdetail.Status.DesiredNumberScheduled, dsdetail.Spec.UpdateStrategy.RollingUpdate.MaxUnavailable.StrVal)
 
 	//删除副本数大于等于最大不可用副本数时，拒绝删除
 	if countUpdate >= countMaxuav {
