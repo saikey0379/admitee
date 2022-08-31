@@ -273,7 +273,7 @@ func (sm *SmoothManager) GetSmoothConfig(pod corev1.Pod) (*v1alpha1.Smooth, erro
 		}
 	}
 
-	return nil, fmt.Errorf("FAILURE: NO Smooth Matched [%s]", namespace+"/"+kindTarget+"/"+nameTarget)
+	return nil, err
 }
 
 func (sm *SmoothManager) GetTarget(pod corev1.Pod) (targetKind string, targetName string, err error) {
