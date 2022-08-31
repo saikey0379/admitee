@@ -87,7 +87,7 @@ func (sm *SmoothManager) EnterSmoothProcess(ar *v1beta1.AdmissionReview) *v1beta
 			glog.Errorf("FAILURE: Get Target [%s/%s], %v", namespace, namePod, err)
 			return returnAdmissionResponse(allowed, err.Error())
 		}
-		glog.Infof("MESSAGE: Smoothing Target [%s]", namespace+"/"+kindTarget+"/"+nameTarget)
+		glog.Infof("MESSAGE: Smoothing Target [%s] POD [%s]", namespace+"/"+kindTarget+"/"+nameTarget, namePod)
 		// Lock this request
 		or := pod.GetOwnerReferences()
 		nameOwnerReference := or[0].Name
