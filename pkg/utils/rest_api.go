@@ -33,6 +33,9 @@ func RestApiGet(url string) (string, error) {
 		defer resp.Body.Close()
 	}
 
+	if resp.StatusCode != http.StatusOK {
+		return "", fmt.Errorf("FAILURE: Http status code[%v]", resp.StatusCode)
+	}
 	ret, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		return "", err
