@@ -1,6 +1,7 @@
 package smooth
 
 import (
+	"math"
 	"strconv"
 	"strings"
 
@@ -25,23 +26,39 @@ func (sm *SmoothManager) VerifyDeletePodDeployment(namespace string, project str
 	}
 
 	var countMaxuav int
-	if deployment.Spec.Strategy.RollingUpdate.MaxUnavailable.StrVal != "0" {
-		maxuvfloat64, err := strconv.ParseFloat(strings.Replace(deployment.Spec.Strategy.RollingUpdate.MaxUnavailable.StrVal, "%", "", -1), 64)
+	// get countMaxuav by MaxUnavailable
+	if deployment.Spec.Strategy.RollingUpdate.MaxUnavailable.IntValue() != 0 {
+		countMaxuav = deployment.Spec.Strategy.RollingUpdate.MaxUnavailable.IntValue()
+	} else {
+		maxuvfloat64, err := strconv.ParseFloat(strings.Replace(deployment.Spec.Strategy.RollingUpdate.MaxUnavailable.String(), "%", "", -1), 64)
 		if err != nil {
 			glog.Errorf("FAILURE: Can't encode maxuvfloat64[%v]", err)
-			return false, "Deployment MaxUnavailable[" + err.Error() + "]"
 		}
-		maxuvpercent := maxuvfloat64 * 0.01
-		countMaxuav = int(float64(*deployment.Spec.Replicas) * maxuvpercent)
-		if countMaxuav == 0 {
-			countMaxuav = 1
-		}
-		glog.Infof("MESSAGE: Deployment[%s] SmoothCount: %v, MaxUnavailableCount: %v, DesiredNumber：%v, MaxUnavailable:%v", project, countUpdate, countMaxuav, *deployment.Spec.Replicas, deployment.Spec.Strategy.RollingUpdate.MaxUnavailable.StrVal)
+		countMaxuav = int(float64(*deployment.Spec.Replicas) * maxuvfloat64 * 0.01)
+	}
+	glog.Infof("MESSAGE: Deployment[%s] SmoothCount: %v, MaxUnavailableCount: %v, DesiredNumber：%v, MaxUnavailable:%v", project, countUpdate, countMaxuav, *deployment.Spec.Replicas, deployment.Spec.Strategy.RollingUpdate.MaxUnavailable.String())
 
-		//删除副本数大于等于最大不可用副本数时，拒绝删除
-		if countUpdate >= countMaxuav {
-			return false, "Deployment exceed maxUnavailable[" + strconv.Itoa(countUpdate) + "/" + strconv.Itoa(countMaxuav) + "]"
+	// get countMaxuav by MaxSurge
+	if countMaxuav == 0 {
+		if deployment.Spec.Strategy.RollingUpdate.MaxSurge.IntValue() != 0 {
+			countMaxuav = deployment.Spec.Strategy.RollingUpdate.MaxSurge.IntValue()
+		} else {
+			maxuvfloat64, err := strconv.ParseFloat(strings.Replace(deployment.Spec.Strategy.RollingUpdate.MaxSurge.String(), "%", "", -1), 64)
+			if err != nil {
+				glog.Errorf("FAILURE: Can't encode maxuvfloat64[%v]", err)
+			}
+			countMaxuav = int(math.Ceil(float64(*deployment.Spec.Replicas) * maxuvfloat64 * 0.01))
 		}
+		glog.Infof("MESSAGE: Deployment[%s] SmoothCount: %v, MaxUnavailableCount: %v, DesiredNumber：%v, MaxSurge:%v", project, countUpdate, countMaxuav, *deployment.Spec.Replicas, deployment.Spec.Strategy.RollingUpdate.MaxSurge.String())
+	}
+
+	if countMaxuav == 0 {
+		countMaxuav = 1
+	}
+
+	//删除副本数大于等于最大不可用副本数时，拒绝删除
+	if countUpdate >= countMaxuav {
+		return false, "Deployment exceed maxUnavailable[" + strconv.Itoa(countUpdate) + "/" + strconv.Itoa(countMaxuav) + "]"
 	}
 	return true, "Deployment maxUnavailable[" + strconv.Itoa(countUpdate) + "/" + strconv.Itoa(countMaxuav) + "]"
 }
