@@ -8,16 +8,11 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func (sm *SmoothManager) VerifyDeletePodDaemonSet(namespace string, project string, countUpdate int) (bool, string) {
-	dsdetail, err := sm.ClientKubeSet.AppsV1().DaemonSets(namespace).Get(sm.Ctx, project, metav1.GetOptions{})
+func (sm *SmoothManager) VerifyDeletePodDaemonSet(namespace string, dsName string, countUpdate int) (bool, string) {
+	dsdetail, err := sm.ClientKubeSet.AppsV1().DaemonSets(namespace).Get(sm.Ctx, dsName, metav1.GetOptions{})
 	if err != nil {
 		glog.Errorf("FAILURE: Get DaemonSet[%v]", err)
 		return false, "DaemonSet GET[" + err.Error() + "]"
-	}
-
-	//无可用副本，允许删除
-	if dsdetail.Status.NumberAvailable == 0 {
-		return true, "DaemonSet NumberAvailable[" + strconv.Itoa(int(dsdetail.Status.NumberAvailable)) + "]"
 	}
 
 	maxuvfloat64, err := strconv.ParseFloat(strings.Replace(dsdetail.Spec.UpdateStrategy.RollingUpdate.MaxUnavailable.StrVal, "%", "", -1), 64)
@@ -30,7 +25,7 @@ func (sm *SmoothManager) VerifyDeletePodDaemonSet(namespace string, project stri
 	if countMaxuav == 0 {
 		countMaxuav = 1
 	}
-	glog.Infof("MESSAGE: DaemonSet[%s] SmoothCount: %v, MaxUnavailableCount: %v, DesiredNumber：%v, MaxUnavailable:%v", project, countUpdate, countMaxuav, dsdetail.Status.DesiredNumberScheduled, dsdetail.Spec.UpdateStrategy.RollingUpdate.MaxUnavailable.StrVal)
+	glog.Infof("MESSAGE: DaemonSet[%s] SmoothCount: %v, MaxUnavailableCount: %v, DesiredNumber：%v, MaxUnavailable:%v", dsName, countUpdate, countMaxuav, dsdetail.Status.DesiredNumberScheduled, dsdetail.Spec.UpdateStrategy.RollingUpdate.MaxUnavailable.StrVal)
 
 	//删除副本数大于等于最大不可用副本数时，拒绝删除
 	if countUpdate >= countMaxuav {

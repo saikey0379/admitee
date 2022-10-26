@@ -57,18 +57,18 @@ func (sm *SmoothManager) EnterSmoothProcess(ar *v1beta1.AdmissionReview) *v1beta
 
 	//非POD请求，拒绝
 	if req.Kind.Kind != "Pod" {
-		return returnAdmissionResponse(allowed, "FAILURE: KIND ["+req.Kind.Kind+"]")
+		return returnAdmissionResponse(allowed, "FAILURE: KIND["+req.Kind.Kind+"]")
 	}
 	//非删除操作，拒绝
 	if req.Operation != "DELETE" {
-		return returnAdmissionResponse(allowed, "FAILURE: OPERATION ["+string(req.Operation)+"]")
+		return returnAdmissionResponse(allowed, "FAILURE: OPERATION["+string(req.Operation)+"]")
 	}
 
 	var pod corev1.Pod
 	err := json.Unmarshal(req.OldObject.Raw, &pod)
 	if err != nil {
-		glog.Errorf("FAILURE: POD [%v], Unmarshal [false], Resource [%v]", req.Namespace+"/"+req.Name, req)
-		return returnAdmissionResponse(allowed, "FAILURE: POD Unmarshal ["+err.Error()+"]")
+		glog.Errorf("FAILURE: POD[%v], Unmarshal[false], Resource[%v]", req.Namespace+"/"+req.Name, req)
+		return returnAdmissionResponse(allowed, "FAILURE: POD Unmarshal["+err.Error()+"]")
 	}
 
 	var namespace = pod.Namespace
@@ -82,16 +82,13 @@ func (sm *SmoothManager) EnterSmoothProcess(ar *v1beta1.AdmissionReview) *v1beta
 		allowed, reason = sm.SmoothConfigExec(pod)
 	} else {
 		// POD首次删除
-		kindTarget, nameTarget, err := sm.GetTarget(pod)
+		_, _, err := sm.GetTarget(pod)
 		if err != nil {
-			glog.Errorf("FAILURE: Get Target [%s/%s], %v", namespace, namePod, err)
+			glog.Errorf("FAILURE: Get Target[%s/%s], %v", namespace, namePod, err)
 			return returnAdmissionResponse(allowed, err.Error())
 		}
-		glog.Infof("MESSAGE: Smoothing Target [%s] POD [%s]", namespace+"/"+kindTarget+"/"+nameTarget, namePod)
 		// Lock this request
-		or := pod.GetOwnerReferences()
-		nameOwnerReference := or[0].Name
-		kindOwnerReference := or[0].Kind
+		kindOwnerReference, nameOwnerReference, _ := utils.GetOwnerReference(pod)
 		key := "LOCK_" + kindOwnerReference + "_" + namespace + "_" + nameOwnerReference
 		for {
 			boolLock := sm.ClientRedis.Lock(key)
@@ -102,6 +99,7 @@ func (sm *SmoothManager) EnterSmoothProcess(ar *v1beta1.AdmissionReview) *v1beta
 				break
 			}
 		}
+		glog.Infof("MESSAGE: Smoothing Target[%s] POD[%s]", namespace+"/"+kindOwnerReference+"/"+nameOwnerReference, namePod)
 
 		var boolPodDelete bool
 		// count smoothing pods
@@ -112,14 +110,14 @@ func (sm *SmoothManager) EnterSmoothProcess(ar *v1beta1.AdmissionReview) *v1beta
 
 		if countUpdate < 1 {
 			boolPodDelete = true
-			glog.Infof("MESSAGE: Target [%s] Smoothing Count [0]", namespace+"/"+kindTarget+"/"+nameTarget)
+			glog.Infof("MESSAGE: Target[%s] Smoothing Count[0]", namespace+"/"+kindOwnerReference+"/"+nameOwnerReference)
 		} else {
 			//确定副本是否允许删除
-			switch kindTarget {
+			switch kindOwnerReference {
 			case "DaemonSet":
-				boolPodDelete, reason = sm.VerifyDeletePodDaemonSet(namespace, nameTarget, countUpdate)
-			case "Deployment":
-				boolPodDelete, reason = sm.VerifyDeletePodDeployment(namespace, nameTarget, countUpdate)
+				boolPodDelete, reason = sm.VerifyDeletePodDaemonSet(namespace, nameOwnerReference, countUpdate)
+			case "ReplicaSet":
+				boolPodDelete, reason = sm.VerifyDeletePodReplicaSet(namespace, nameOwnerReference, countUpdate)
 			}
 		}
 
@@ -130,11 +128,11 @@ func (sm *SmoothManager) EnterSmoothProcess(ar *v1beta1.AdmissionReview) *v1beta
 		// Release the lock
 		unLock := sm.ClientRedis.UnLock(key)
 		if unLock != 1 {
-			glog.Errorf("FAILURE: UnLock [" + key + "]")
+			glog.Errorf("FAILURE: UnLock[" + key + "]")
 		}
 	}
 
-	glog.Infof("MESSAGE: POD [%v], Delete [%v], Reason [%v]", req.Namespace+"/"+req.Name, allowed, reason)
+	glog.Infof("MESSAGE: POD[%v],Delete[%v],Reason[%v]", req.Namespace+"/"+req.Name, allowed, reason)
 	if allowed {
 		key := "ADMITEE_SMOOTH_DEL_" + req.Namespace + "_" + req.Name
 		vauleDelete, _ := sm.ClientRedis.Client.Get(sm.ClientRedis.Ctx, key).Result()
@@ -142,7 +140,7 @@ func (sm *SmoothManager) EnterSmoothProcess(ar *v1beta1.AdmissionReview) *v1beta
 			value := "1"
 			err = sm.ClientRedis.Client.SetNX(sm.ClientRedis.Ctx, key, value, 0).Err()
 			if err == nil {
-				glog.Infof("SUCCESS: SET [%s:%s]", key, value)
+				glog.Infof("SUCCESS: SET[%s:%s]", key, value)
 			}
 		}
 	}
@@ -169,14 +167,14 @@ func (sm *SmoothManager) SmoothConfigExec(pod corev1.Pod) (bool, string) {
 			value := pod.Namespace + "_" + pod.GetOwnerReferences()[0].Name + "_" + interval + "_" + strconv.FormatInt(time.Now().Unix(), 10) + "_0"
 			err := sm.ClientRedis.Client.SetNX(sm.ClientRedis.Ctx, key, value, 0).Err()
 			if err == nil {
-				glog.Infof("SUCCESS: SET [%s:%s]", key, value)
+				glog.Infof("SUCCESS: SET[%s:%s]", key, value)
 			}
 
 		}
 	}
 
 	if smConfig == nil {
-		return true, fmt.Sprintf("Smooth Config NOT SET [%s/%s]", pod.Namespace, pod.Name)
+		return true, fmt.Sprintf("Smooth Config NOT SET[%s/%s]", pod.Namespace, pod.Name)
 	}
 
 	var allowed = true
@@ -193,7 +191,7 @@ func (sm *SmoothManager) SmoothConfigExec(pod corev1.Pod) (bool, string) {
 		}
 
 		if rule.Path == "" {
-			return false, fmt.Sprintf("FAILURE: Path NOT SET [%v]", rule)
+			return false, fmt.Sprintf("FAILURE: Path NOT SET[%v]", rule)
 		}
 
 		var url string
@@ -214,8 +212,8 @@ func (sm *SmoothManager) SmoothConfigExec(pod corev1.Pod) (bool, string) {
 			respStr, err = utils.RestApiGet(url)
 		case "post", "Post", "POST":
 			if rule.Body == "" {
-				glog.Errorf("FAILURE: Body NOT SET [%v]", rule)
-				return false, fmt.Sprintf("FAILURE: Body NOT SET [%v]", rule)
+				glog.Errorf("FAILURE: Body NOT SET[%v]", rule)
+				return false, fmt.Sprintf("FAILURE: Body NOT SET[%v]", rule)
 			}
 			respStr, err = utils.RestApiPost(url, rule.Body)
 		}
@@ -305,7 +303,7 @@ func (sm *SmoothManager) CountSmoothingPodsByOwnerReferenceName(namespace string
 	reg := "ADMITEE_SMOOTH_POD_" + namespace + "_" + ownerReferenceName + "*"
 	keys, err = sm.ClientRedis.Client.Keys(sm.ClientRedis.Ctx, reg).Result()
 	if err != nil {
-		glog.Errorf("FAILURE: POD KEYS [%s]: %v", reg, err)
+		glog.Errorf("FAILURE: POD KEYS[%s]: %v", reg, err)
 	}
 
 	// match pod by ownerReferenceName
@@ -313,7 +311,7 @@ func (sm *SmoothManager) CountSmoothingPodsByOwnerReferenceName(namespace string
 		var result string
 		result, err = sm.ClientRedis.Client.Get(sm.ClientRedis.Ctx, v).Result()
 		if err != nil {
-			glog.Errorf("FAILURE: GET [%s]: %v", v, err)
+			glog.Errorf("FAILURE: GET[%s]: %v", v, err)
 			return countUpdate, err
 		}
 		podInfo := strings.Split(result, "_")
