@@ -108,7 +108,7 @@ func (sm *SmoothManager) EnterSmoothProcess(ar *v1beta1.AdmissionReview) *v1beta
 			return returnAdmissionResponse(allowed, err.Error())
 		}
 
-		if countUpdate < 1 || pod.Labels[v1alpha1.Label] == "disable" ||  pod.Labels[v1alpha1.Label] == "false" {
+		if countUpdate < 1 || pod.Labels[v1alpha1.Label] == "disable" || pod.Labels[v1alpha1.Label] == "false" {
 			boolPodDelete = true
 			glog.Infof("MESSAGE: Target[%s] Smoothing Count[0]", namespace+"/"+kindOwnerReference+"/"+nameOwnerReference)
 		} else {
