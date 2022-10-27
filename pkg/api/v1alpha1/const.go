@@ -5,4 +5,5 @@ const (
 	Group    = "validating.example.com"
 	Version  = "v1alpha1"
 	Resource = "smooths"
+	Label    = "admiteed-validate"
 )
