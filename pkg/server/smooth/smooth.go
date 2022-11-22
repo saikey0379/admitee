@@ -233,6 +233,17 @@ func (sm *SmoothManager) SmoothConfigExec(pod corev1.Pod) (bool, string) {
 		}
 	}
 
+	if allowed {
+		//流量未隔离，拒绝
+		for _, i := range pod.Status.Conditions {
+			if i.Type == "Ready" && i.Status == "True" {
+				reasons = append(reasons, "{pod status "+string(i.Type)+"}")
+				allowed = false
+				break
+			}
+		}
+	}
+
 	return allowed, strings.Join(reasons, ",")
 }
 
