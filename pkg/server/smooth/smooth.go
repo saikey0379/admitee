@@ -71,6 +71,15 @@ func (sm *SmoothManager) EnterSmoothProcess(ar *v1beta1.AdmissionReview) *v1beta
 		return returnAdmissionResponse(allowed, "FAILURE: POD Unmarshal["+err.Error()+"]")
 	}
 
+	if pod.Status.Phase != "Running" {
+		switch pod.Status.Phase {
+		case "Pending":
+			return returnAdmissionResponse(true, "{pod status "+string(pod.Status.Phase)+"}")
+		case "Failed":
+			return returnAdmissionResponse(true, "{pod status "+string(pod.Status.Phase)+"/"+string(pod.Status.Reason)+"}")
+		}
+	}
+
 	var namespace = pod.Namespace
 	var namePod = pod.Name
 	var reason string
