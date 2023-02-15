@@ -33,6 +33,9 @@ spec:
               interval:
                 format: int32
                 type: integer
+              timeout:
+                format: int32
+                type: integer
               rules:
                 items:
                   properties:

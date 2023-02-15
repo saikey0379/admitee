@@ -7,6 +7,7 @@ import (
 
 const (
 	DefaultInterval = "60"
+	DefaultTimeout  = "60"
 	DefaultPort     = 80
 	DefaultMethod   = "get"
 )
@@ -25,6 +26,7 @@ type SmoothSpec struct {
 	TargetRef autoscalingv2.CrossVersionObjectReference `json:"targetRef"`
 	Rules     []Rule                                    `json:"rules"`
 	Interval  int                                       `json:"interval"`
+	Timeout   int                                       `json:"tiomeout"`
 }
 
 type Smooth struct {

@@ -41,6 +41,8 @@ func (sm *SmoothManager) LoopSmooth() {
 			interval, _ := strconv.Atoi(valueInfo[2])
 			lastime, _ := strconv.Atoi(valueInfo[3])
 			count, _ := strconv.Atoi(valueInfo[4])
+			timeout, _ := strconv.Atoi(valueInfo[5])
+
 			if lastime+interval <= int(time.Now().Unix()) {
 				var errDEL error
 				_, errGET := sm.ClientKubeSet.CoreV1().Pods(namespace).Get(sm.ClientRedis.Ctx, podName, metav1.GetOptions{})
@@ -62,7 +64,7 @@ func (sm *SmoothManager) LoopSmooth() {
 					}
 				}
 
-				if errGET != nil || (errGET == nil && errDEL == nil) || count*interval >= 3600 {
+				if errGET != nil || (errGET == nil && errDEL == nil) || count*interval >= timeout {
 					n, _ := sm.ClientRedis.Client.Exists(sm.ClientRedis.Ctx, "ADMITEE_SMOOTH_DEL_"+namespace+"_"+podName).Result()
 					if n == 0 {
 						//删除RDB记录

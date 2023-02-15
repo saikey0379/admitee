@@ -167,13 +167,19 @@ func (sm *SmoothManager) SmoothConfigExec(pod corev1.Pod) (bool, string) {
 	if vaulePOD == "" {
 		_, err := sm.ClientKubeSet.CoreV1().Pods(pod.Namespace).Get(sm.Ctx, pod.Name, metav1.GetOptions{})
 		if err == nil {
-			var interval string
+			var interval, timeout string
 			if smConfig != nil && smConfig.Spec.Interval > 0 {
 				interval = strconv.Itoa(smConfig.Spec.Interval)
 			} else {
 				interval = v1alpha1.DefaultInterval
 			}
-			value := pod.Namespace + "_" + pod.GetOwnerReferences()[0].Name + "_" + interval + "_" + strconv.FormatInt(time.Now().Unix(), 10) + "_0"
+			if smConfig != nil && smConfig.Spec.Timeout > 0 {
+				timeout = strconv.Itoa(smConfig.Spec.Timeout)
+			} else {
+				timeout = v1alpha1.DefaultTimeout
+			}
+
+			value := pod.Namespace + "_" + pod.GetOwnerReferences()[0].Name + "_" + interval + "_" + strconv.FormatInt(time.Now().Unix(), 10) + "_0_" + timeout
 			err := sm.ClientRedis.Client.SetNX(sm.ClientRedis.Ctx, key, value, 0).Err()
 			if err == nil {
 				glog.Infof("SUCCESS: SET[%s:%s]", key, value)
