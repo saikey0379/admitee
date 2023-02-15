@@ -26,7 +26,7 @@ type SmoothSpec struct {
 	TargetRef autoscalingv2.CrossVersionObjectReference `json:"targetRef"`
 	Rules     []Rule                                    `json:"rules"`
 	Interval  int                                       `json:"interval"`
-	Timeout   int                                       `json:"tiomeout"`
+	Timeout   int                                       `json:"timeout"`
 }
 
 type Smooth struct {

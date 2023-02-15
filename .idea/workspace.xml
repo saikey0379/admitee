@@ -5,10 +5,9 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="006d1d04-9847-47fe-bdd0-1eb32eadf146" name="Changes" comment="">
-      <change beforePath="$PROJECT_DIR$/deploy/CustomResourceDefinition.yaml" beforeDir="false" afterPath="$PROJECT_DIR$/deploy/CustomResourceDefinition.yaml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/pkg/api/v1alpha1/smooth.go" beforeDir="false" afterPath="$PROJECT_DIR$/pkg/api/v1alpha1/smooth.go" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/pkg/server/smooth/loop_del.go" beforeDir="false" afterPath="$PROJECT_DIR$/pkg/server/smooth/loop_del.go" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pkg/server/smooth/smooth.go" beforeDir="false" afterPath="$PROJECT_DIR$/pkg/server/smooth/smooth.go" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
