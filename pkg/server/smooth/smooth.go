@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"k8s.io/apimachinery/pkg/types"
 	"strconv"
 	"strings"
 	"time"
@@ -21,6 +20,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/kubernetes/pkg/apis/core/v1"
@@ -269,36 +269,36 @@ func (sm *SmoothManager) SmoothConfigExec(pod corev1.Pod) (bool, string) {
 		}
 	}
 
-	if !allowed || healthz {
-		return false, strings.Join(reasons, ",")
-	} else {
-		//流量已隔离，修改pod标签，避免影响副本计数
-		if smConfig.Spec.SmLabel != "" {
-			if pod.Labels[smConfig.Spec.SmLabel] != "smoothed" {
-				pod.Labels[smConfig.Spec.SmLabel] = "smoothed"
-				playLoadBytes, _ := json.Marshal(map[string]interface{}{"metadata": map[string]map[string]string{"labels": pod.Labels}})
-				_, err := sm.ClientKubeSet.CoreV1().Pods(pod.Namespace).Patch(sm.Ctx, pod.Name, types.StrategicMergePatchType, playLoadBytes, metav1.PatchOptions{})
-				if err != nil {
-					reasons = append(reasons, "{smoothLabel set ["+err.Error()+"]}")
-					allowed = false
-				} else {
-					if valueSmLabeled == "" {
-						smConfigByte, err := json.Marshal(smConfig)
-						if err != nil {
-							glog.Infof("FAILURE: Marshal SmConfig[%s:%s]", smConfig, err.Error())
-							reasons = append(reasons, "{SmConfig Marshal ["+err.Error()+"]}")
-							allowed = false
-						}
-						err = sm.ClientRedis.Client.SetNX(sm.ClientRedis.Ctx, keySmLabeled, string(smConfigByte), 0).Err()
-						if err != nil {
-							glog.Infof("FAILURE: SET[%s:%s]", keySmLabeled, valueSmLabeled)
-							reasons = append(reasons, "{SmConfig set ["+err.Error()+"]}")
-							allowed = false
-						}
+	//流量已隔离，修改pod标签，避免影响副本计数
+	if !healthz && smConfig.Spec.SmLabel != "" {
+		if pod.Labels[smConfig.Spec.SmLabel] != "smoothed" {
+			pod.Labels[smConfig.Spec.SmLabel] = "smoothed"
+			playLoadBytes, _ := json.Marshal(map[string]interface{}{"metadata": map[string]map[string]string{"labels": pod.Labels}})
+			_, err := sm.ClientKubeSet.CoreV1().Pods(pod.Namespace).Patch(sm.Ctx, pod.Name, types.StrategicMergePatchType, playLoadBytes, metav1.PatchOptions{})
+			if err != nil {
+				reasons = append(reasons, "{smoothLabel set ["+err.Error()+"]}")
+				allowed = false
+			} else {
+				if valueSmLabeled == "" {
+					smConfigByte, err := json.Marshal(smConfig)
+					if err != nil {
+						glog.Infof("FAILURE: Marshal SmConfig[%s:%s]", smConfig, err.Error())
+						reasons = append(reasons, "{SmConfig Marshal ["+err.Error()+"]}")
+						allowed = false
+					}
+					err = sm.ClientRedis.Client.SetNX(sm.ClientRedis.Ctx, keySmLabeled, string(smConfigByte), 0).Err()
+					if err != nil {
+						glog.Infof("FAILURE: SET[%s:%s]", keySmLabeled, valueSmLabeled)
+						reasons = append(reasons, "{SmConfig set ["+err.Error()+"]}")
+						allowed = false
 					}
 				}
 			}
 		}
+	}
+
+	if !allowed || healthz {
+		return false, strings.Join(reasons, ",")
 	}
 	return allowed, strings.Join(reasons, ",")
 }
