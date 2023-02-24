@@ -27,6 +27,7 @@ type SmoothSpec struct {
 	Rules     []Rule                                    `json:"rules"`
 	Interval  int                                       `json:"interval"`
 	Timeout   int                                       `json:"timeout"`
+	SmLabel   string                                    `json:"smLabel"`
 }
 
 type Smooth struct {

@@ -36,6 +36,8 @@ spec:
               timeout:
                 format: int32
                 type: integer
+              smLabel:
+                type: string
               rules:
                 items:
                   properties:

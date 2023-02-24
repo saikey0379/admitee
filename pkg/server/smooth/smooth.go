@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"k8s.io/apimachinery/pkg/types"
 	"strconv"
 	"strings"
 	"time"
@@ -157,13 +158,24 @@ func (sm *SmoothManager) EnterSmoothProcess(ar *v1beta1.AdmissionReview) *v1beta
 }
 
 func (sm *SmoothManager) SmoothConfigExec(pod corev1.Pod) (bool, string) {
-	smConfig, err := sm.GetSmoothConfig(pod)
-	if err != nil {
-		return false, err.Error()
+	var keySmLabeled = "ADMITEE_SMOOTH_LABEL_" + pod.Namespace + "_" + pod.Name
+	valueSmLabeled, _ := sm.ClientRedis.Client.Get(sm.ClientRedis.Ctx, keySmLabeled).Result()
+
+	var smConfig *v1alpha1.Smooth
+	if valueSmLabeled != "" {
+		if err := json.Unmarshal([]byte(valueSmLabeled), &smConfig); err != nil {
+			return false, err.Error()
+		}
+	} else {
+		var err error
+		smConfig, err = sm.GetSmoothConfig(pod)
+		if err != nil {
+			return false, err.Error()
+		}
 	}
 
-	var key = "ADMITEE_SMOOTH_POD_" + pod.Namespace + "_" + pod.Name
-	vaulePOD, _ := sm.ClientRedis.Client.Get(sm.ClientRedis.Ctx, key).Result()
+	var keyPod = "ADMITEE_SMOOTH_POD_" + pod.Namespace + "_" + pod.Name
+	vaulePOD, _ := sm.ClientRedis.Client.Get(sm.ClientRedis.Ctx, keyPod).Result()
 	if vaulePOD == "" {
 		_, err := sm.ClientKubeSet.CoreV1().Pods(pod.Namespace).Get(sm.Ctx, pod.Name, metav1.GetOptions{})
 		if err == nil {
@@ -180,11 +192,10 @@ func (sm *SmoothManager) SmoothConfigExec(pod corev1.Pod) (bool, string) {
 			}
 
 			value := pod.Namespace + "_" + pod.GetOwnerReferences()[0].Name + "_" + interval + "_" + strconv.FormatInt(time.Now().Unix(), 10) + "_0_" + timeout
-			err := sm.ClientRedis.Client.SetNX(sm.ClientRedis.Ctx, key, value, 0).Err()
+			err := sm.ClientRedis.Client.SetNX(sm.ClientRedis.Ctx, keyPod, value, 0).Err()
 			if err == nil {
-				glog.Infof("SUCCESS: SET[%s:%s]", key, value)
+				glog.Infof("SUCCESS: SET[%s:%s]", keyPod, value)
 			}
-
 		}
 	}
 
@@ -248,17 +259,47 @@ func (sm *SmoothManager) SmoothConfigExec(pod corev1.Pod) (bool, string) {
 		}
 	}
 
-	if allowed {
-		//流量未隔离，拒绝
-		for _, i := range pod.Status.Conditions {
-			if i.Type == "Ready" && i.Status == "True" {
-				reasons = append(reasons, "{pod status "+string(i.Type)+"}")
-				allowed = false
-				break
-			}
+	//Rod状态
+	var healthz bool
+	for _, i := range pod.Status.Conditions {
+		if i.Type == "Ready" && i.Status == "True" {
+			reasons = append(reasons, "{pod status "+string(i.Type)+"}")
+			healthz = true
+			break
 		}
 	}
 
+	if !allowed || healthz {
+		return false, strings.Join(reasons, ",")
+	} else {
+		//流量已隔离，修改pod标签，避免影响副本计数
+		if smConfig.Spec.SmLabel != "" {
+			if pod.Labels[smConfig.Spec.SmLabel] != "smoothed" {
+				pod.Labels[smConfig.Spec.SmLabel] = "smoothed"
+				playLoadBytes, _ := json.Marshal(map[string]interface{}{"metadata": map[string]map[string]string{"labels": pod.Labels}})
+				_, err := sm.ClientKubeSet.CoreV1().Pods(pod.Namespace).Patch(sm.Ctx, pod.Name, types.StrategicMergePatchType, playLoadBytes, metav1.PatchOptions{})
+				if err != nil {
+					reasons = append(reasons, "{smoothLabel set ["+err.Error()+"]}")
+					allowed = false
+				} else {
+					if valueSmLabeled == "" {
+						smConfigByte, err := json.Marshal(smConfig)
+						if err != nil {
+							glog.Infof("FAILURE: Marshal SmConfig[%s:%s]", smConfig, err.Error())
+							reasons = append(reasons, "{SmConfig Marshal ["+err.Error()+"]}")
+							allowed = false
+						}
+						err = sm.ClientRedis.Client.SetNX(sm.ClientRedis.Ctx, keySmLabeled, string(smConfigByte), 0).Err()
+						if err != nil {
+							glog.Infof("FAILURE: SET[%s:%s]", keySmLabeled, valueSmLabeled)
+							reasons = append(reasons, "{SmConfig set ["+err.Error()+"]}")
+							allowed = false
+						}
+					}
+				}
+			}
+		}
+	}
 	return allowed, strings.Join(reasons, ",")
 }
 
