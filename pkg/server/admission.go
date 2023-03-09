@@ -102,4 +102,5 @@ func (s *apiServer) DeamonSmooth() {
 	}
 	go sm.LoopSmooth()
 	go sm.LoopDelete()
+	go sm.LoopKClear()
 }

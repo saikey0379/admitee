@@ -6,8 +6,8 @@ import (
 )
 
 const (
-	DefaultInterval = "60"
-	DefaultTimeout  = "60"
+	DefaultInterval = 60
+	DefaultTimeout  = 60
 	DefaultPort     = 80
 	DefaultMethod   = "get"
 )

@@ -118,7 +118,6 @@ func (sm *SmoothManager) LoopDelete() {
 			namespace := keyInfo[3]
 			podName := keyInfo[4]
 
-			keyPOD := "ADMITEE_SMOOTH_POD_" + namespace + "_" + podName
 			_, err = sm.ClientKubeSet.CoreV1().Pods(namespace).Get(sm.ClientRedis.Ctx, podName, metav1.GetOptions{})
 			if err != nil {
 				//POD不存在，删除key，避免轮询更新冲突，加锁
@@ -133,6 +132,7 @@ func (sm *SmoothManager) LoopDelete() {
 					}
 				}
 
+				keyPOD := "ADMITEE_SMOOTH_POD_" + namespace + "_" + podName
 				err = sm.ClientRedis.Client.Del(sm.ClientRedis.Ctx, keyPOD).Err()
 				if err != nil {
 					glog.Errorf("FAILURE: DEL[%s]: %v", keyPOD, err)
@@ -153,9 +153,63 @@ func (sm *SmoothManager) LoopDelete() {
 				}
 
 				time.Sleep(time.Duration(1) * time.Second)
+			} else {
+				//POD存在，则删除POD
+				errDEL := sm.ClientKubeSet.CoreV1().Pods(namespace).Delete(sm.ClientRedis.Ctx, podName, metav1.DeleteOptions{})
+				if errDEL != nil {
+					glog.Errorf("FAILURE: DEL[%s]", errDEL.Error())
+				}
 			}
 		}
 		time.Sleep(time.Duration(1) * time.Second)
+		sm.ClientRedis.UnLock(key)
+	}
+}
+
+func (sm *SmoothManager) LoopKClear() {
+	keyArray := []string{"ADMITEE_SMOOTH_LABEL_", "ADMITEE_SMOOTH_NOTREADY_"}
+	for {
+		key := "ADMITEE_SMOOTH_LOCK_LOOP_KCLEAR"
+		for {
+			boolLock := sm.ClientRedis.Lock(key)
+			if !boolLock {
+				time.Sleep(time.Duration(1) * time.Second)
+				continue
+			} else {
+				break
+			}
+		}
+
+		for _, reg := range keyArray {
+			keyClears, err := sm.ClientRedis.Client.Keys(sm.ClientRedis.Ctx, reg+"*").Result()
+			if err != nil {
+				glog.Errorf("FAILURE: KEYS[%s]: %v", reg, err)
+			}
+			for _, keyClear := range keyClears {
+				_, err := sm.ClientRedis.Client.Get(sm.ClientRedis.Ctx, keyClear).Result()
+				if err != nil {
+					glog.Errorf("FAILURE: GET[%s]: %v", keyClear, err)
+					continue
+				}
+
+				keyInfo := strings.Split(keyClear, "_")
+				namespace := keyInfo[3]
+				podName := keyInfo[4]
+
+				_, err = sm.ClientKubeSet.CoreV1().Pods(namespace).Get(sm.ClientRedis.Ctx, podName, metav1.GetOptions{})
+				if err != nil {
+					//POD不存在，删除key
+					err = sm.ClientRedis.Client.Del(sm.ClientRedis.Ctx, keyClear).Err()
+					if err != nil {
+						glog.Errorf("FAILURE: DEL[%s]: %v", keyClear, err)
+					} else {
+						glog.Infof("SUCCESS: DEL[%s]", keyClear)
+					}
+					time.Sleep(time.Duration(1) * time.Second)
+				}
+			}
+		}
+		time.Sleep(time.Duration(3600) * time.Second)
 		sm.ClientRedis.UnLock(key)
 	}
 }
