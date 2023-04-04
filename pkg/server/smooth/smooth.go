@@ -85,10 +85,13 @@ func (sm *SmoothManager) EnterSmoothProcess(ar *v1beta1.AdmissionReview) *v1beta
 	var namePod = pod.Name
 	var reason string
 
-	keyPOD := "ADMITEE_SMOOTH_POD_" + namespace + "_" + namePod
+	var keyPOD = "ADMITEE_SMOOTH_POD_" + namespace + "_" + namePod
 	valuePOD, _ := sm.ClientRedis.Client.Get(sm.ClientRedis.Ctx, keyPOD).Result()
 
-	if valuePOD != "" {
+	var keySmLabeled = "ADMITEE_SMOOTH_LABEL_" + namespace + "_" + namePod
+	valueSmLabeled, _ := sm.ClientRedis.Client.Get(sm.ClientRedis.Ctx, keySmLabeled).Result()
+
+	if valuePOD != "" || valueSmLabeled != "" {
 		allowed, reason = sm.SmoothConfigExec(pod)
 	} else {
 		// POD首次删除
@@ -199,7 +202,7 @@ func (sm *SmoothManager) SmoothConfigExec(pod corev1.Pod) (bool, string) {
 	var keyPod = "ADMITEE_SMOOTH_POD_" + pod.Namespace + "_" + pod.Name
 	vaulePOD, _ := sm.ClientRedis.Client.Get(sm.ClientRedis.Ctx, keyPod).Result()
 	if vaulePOD == "" {
-		value := pod.Namespace + "_" + pod.GetOwnerReferences()[0].Name + "_" + strconv.Itoa(interval) + "_" + strconv.FormatInt(time.Now().Unix(), 10) + "_0_" + strconv.Itoa(timeout)
+		value := pod.Namespace + "_" + pod.GetOwnerReferences()[0].Name + "_" + strconv.Itoa(interval) + "_" + strconv.Itoa(timeout) + "_" + strconv.FormatInt(time.Now().Unix(), 10) + "_0"
 		err := sm.ClientRedis.Client.SetNX(sm.ClientRedis.Ctx, keyPod, value, 0).Err()
 		if err == nil {
 			glog.Infof("SUCCESS: SET[%s:%s]", keyPod, value)
@@ -251,8 +254,7 @@ func (sm *SmoothManager) SmoothConfigExec(pod corev1.Pod) (bool, string) {
 			reasons = append(reasons, "{"+err.Error()+"}")
 		} else {
 			reasons = append(reasons, "{"+rule.Method+" "+strconv.Itoa(rule.Port)+rule.Path+" "+respStr+"}")
-			if respStr == strings.TrimSpace(rule.Expect) {
-			} else {
+			if respStr != strings.TrimSpace(rule.Expect) {
 				allowed = false
 			}
 		}

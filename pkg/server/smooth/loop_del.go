@@ -42,9 +42,9 @@ func (sm *SmoothManager) LoopSmooth() {
 				continue
 			}
 			interval, _ := strconv.Atoi(valueInfo[2])
-			lastime, _ := strconv.Atoi(valueInfo[3])
-			count, _ := strconv.Atoi(valueInfo[4])
-			timeout, _ := strconv.Atoi(valueInfo[5])
+			timeout, _ := strconv.Atoi(valueInfo[3])
+			lastime, _ := strconv.Atoi(valueInfo[4])
+			count, _ := strconv.Atoi(valueInfo[5])
 
 			if lastime+interval <= int(time.Now().Unix()) {
 				var errDEL error
@@ -54,8 +54,8 @@ func (sm *SmoothManager) LoopSmooth() {
 					errDEL = sm.ClientKubeSet.CoreV1().Pods(namespace).Delete(sm.ClientRedis.Ctx, podName, metav1.DeleteOptions{})
 					if errDEL != nil {
 						//删除失败，更新RDB
-						valueInfo[3] = strconv.FormatInt(time.Now().Unix(), 10)
-						valueInfo[4] = strconv.Itoa(count + 1)
+						valueInfo[4] = strconv.FormatInt(time.Now().Unix(), 10)
+						valueInfo[5] = strconv.Itoa(count + 1)
 						value := strings.Join(valueInfo, "_")
 						//更新Redis
 						err = sm.ClientRedis.Client.Set(sm.ClientRedis.Ctx, keyPOD, value, 0).Err()

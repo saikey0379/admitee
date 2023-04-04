@@ -10,18 +10,20 @@ import (
 	"time"
 )
 
+const TimeOut = 10
+
 func RestApiGet(url string) (string, error) {
 	client := &http.Client{
 		Transport: &http.Transport{
 			Dial: func(netw, addr string) (net.Conn, error) {
-				conn, err := net.DialTimeout(netw, addr, time.Second*10)
+				conn, err := net.DialTimeout(netw, addr, time.Second*TimeOut)
 				if err != nil {
 					return nil, err
 				}
-				conn.SetDeadline(time.Now().Add(time.Second * 10))
+				conn.SetDeadline(time.Now().Add(time.Second * TimeOut))
 				return conn, nil
 			},
-			ResponseHeaderTimeout: time.Second * 10,
+			ResponseHeaderTimeout: time.Second * TimeOut,
 		},
 	}
 
@@ -48,14 +50,14 @@ func RestApiPost(url string, body string) (string, error) {
 	client := &http.Client{
 		Transport: &http.Transport{
 			Dial: func(netw, addr string) (net.Conn, error) {
-				conn, err := net.DialTimeout(netw, addr, time.Second*3)
+				conn, err := net.DialTimeout(netw, addr, time.Second*TimeOut)
 				if err != nil {
 					return nil, err
 				}
-				conn.SetDeadline(time.Now().Add(time.Second * 3))
+				conn.SetDeadline(time.Now().Add(time.Second * TimeOut))
 				return conn, nil
 			},
-			ResponseHeaderTimeout: time.Second * 3,
+			ResponseHeaderTimeout: time.Second * TimeOut,
 		},
 	}
 	req, err := http.NewRequest("POST", url, bytes.NewBuffer([]byte(body)))
