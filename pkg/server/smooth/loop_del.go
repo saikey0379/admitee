@@ -153,12 +153,6 @@ func (sm *SmoothManager) LoopDelete() {
 				}
 
 				time.Sleep(time.Duration(1) * time.Second)
-			} else {
-				//POD存在，则删除POD
-				errDEL := sm.ClientKubeSet.CoreV1().Pods(namespace).Delete(sm.ClientRedis.Ctx, podName, metav1.DeleteOptions{})
-				if errDEL != nil {
-					glog.Errorf("FAILURE: DEL[%s]", errDEL.Error())
-				}
 			}
 		}
 		time.Sleep(time.Duration(1) * time.Second)

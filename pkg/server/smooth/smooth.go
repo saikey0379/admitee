@@ -201,7 +201,7 @@ func (sm *SmoothManager) SmoothConfigExec(pod corev1.Pod) (bool, string) {
 
 	var keyPod = "ADMITEE_SMOOTH_POD_" + pod.Namespace + "_" + pod.Name
 	vaulePOD, _ := sm.ClientRedis.Client.Get(sm.ClientRedis.Ctx, keyPod).Result()
-	if vaulePOD == "" {
+	if vaulePOD == "" && len(pod.GetOwnerReferences()) == 1 {
 		value := pod.Namespace + "_" + pod.GetOwnerReferences()[0].Name + "_" + strconv.Itoa(interval) + "_" + strconv.Itoa(timeout) + "_" + strconv.FormatInt(time.Now().Unix(), 10) + "_0"
 		err := sm.ClientRedis.Client.SetNX(sm.ClientRedis.Ctx, keyPod, value, 0).Err()
 		if err == nil {
@@ -309,23 +309,12 @@ func (sm *SmoothManager) SmoothConfigExec(pod corev1.Pod) (bool, string) {
 		var keyPodNotReady = "ADMITEE_SMOOTH_NOTREADY_" + pod.Namespace + "_" + pod.Name
 		vaulePodNotReady, _ := sm.ClientRedis.Client.Get(sm.ClientRedis.Ctx, keyPodNotReady).Result()
 		if vaulePodNotReady == "" {
-			value := strconv.FormatInt(time.Now().Unix()+int64(interval), 10)
+			time.Sleep(time.Duration(5) * time.Second)
+
+			value := strconv.FormatInt(time.Now().Unix(), 10)
 			err := sm.ClientRedis.Client.SetNX(sm.ClientRedis.Ctx, keyPodNotReady, value, 0).Err()
 			if err == nil {
 				glog.Infof("SUCCESS: SET[%s:%s]", keyPodNotReady, value)
-			}
-			reasons = append(reasons, "{pod status NotReady "+value+"/"+strconv.FormatInt(time.Now().Unix(), 10)+"}")
-			allowed = false
-		} else {
-			value, err := strconv.Atoi(vaulePodNotReady)
-			if err != nil {
-				glog.Infof("FAILURE: Strconv vaulePodNotReady[%s:%s]%s", keyPodNotReady, vaulePodNotReady)
-				reasons = append(reasons, "{Strconv vaulePodNotReady["+err.Error()+"]}")
-				allowed = false
-			}
-			if value > int(time.Now().Unix()) {
-				reasons = append(reasons, "{pod status NotReady "+vaulePodNotReady+"/"+strconv.FormatInt(time.Now().Unix(), 10)+"}")
-				allowed = false
 			}
 		}
 	}

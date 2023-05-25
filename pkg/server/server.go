@@ -51,7 +51,7 @@ func (s *apiServer) Run(ctx context.Context) {
 		s.Server = &http.Server{
 			Addr:         net.JoinHostPort(s.config.BindAddress, strconv.Itoa(s.config.BindPort)),
 			TLSConfig:    &tls.Config{Certificates: []tls.Certificate{pair}},
-			ReadTimeout:  120 * time.Second,
+			ReadTimeout:  10 * time.Second,
 			WriteTimeout: 10 * time.Second,
 		}
 
