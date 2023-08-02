@@ -36,11 +36,11 @@ var (
 )
 
 type SmoothManager struct {
-	Config            v1alpha1.Smooth
-	ClientKubeDynamic dynamic.Interface
-	ClientKubeSet     *kubernetes.Clientset
-	ClientRedis       *model.AdmiteeRedisClient
-	Ctx               context.Context
+	Config        v1alpha1.Smooth
+	ClientRedis   *model.AdmiteeRedisClient
+	ClientSmooth  dynamic.Interface
+	ClientKubeSet *kubernetes.Clientset
+	Ctx           context.Context
 }
 
 func init() {
@@ -70,6 +70,10 @@ func (sm *SmoothManager) EnterSmoothProcess(ar *v1beta1.AdmissionReview) *v1beta
 	if err != nil {
 		glog.Errorf("FAILURE: POD[%v], Unmarshal[false], Resource[%v]", req.Namespace+"/"+req.Name, req)
 		return returnAdmissionResponse(allowed, "FAILURE: POD Unmarshal["+err.Error()+"]")
+	}
+
+	if pod.ObjectMeta.DeletionTimestamp != nil {
+		return returnAdmissionResponse(true, "{pod DeletionTimestamp not null}")
 	}
 
 	if pod.Status.Phase != "Running" {
@@ -334,7 +338,7 @@ func (sm *SmoothManager) GetSmoothConfig(pod corev1.Pod) (*v1alpha1.Smooth, erro
 		Version:  v1alpha1.Version,
 		Resource: v1alpha1.Resource,
 	}
-	list, err := sm.ClientKubeDynamic.Resource(gvr).Namespace(namespace).List(sm.Ctx, metav1.ListOptions{})
+	list, err := sm.ClientSmooth.Resource(gvr).Namespace(namespace).List(sm.Ctx, metav1.ListOptions{})
 	if err != nil {
 		return nil, err
 	}

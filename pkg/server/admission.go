@@ -84,10 +84,10 @@ func (s *apiServer) ReturnAdmissionResponse(url string, ar *v1beta1.AdmissionRev
 	switch url {
 	case "/admission/smooth":
 		var sm = &smooth.SmoothManager{
-			ClientKubeDynamic: s.clientKubeDynamic,
-			ClientKubeSet:     s.clientKubeSet,
-			ClientRedis:       s.clientRedis,
-			Ctx:               context.Background(),
+			ClientRedis:   s.clientRedis,
+			ClientSmooth:  s.clientSmooth,
+			ClientKubeSet: s.clientKubeSet,
+			Ctx:           context.Background(),
 		}
 		return sm.EnterSmoothProcess(ar)
 	}

@@ -67,7 +67,7 @@ func (sm *SmoothManager) LoopSmooth() {
 					}
 				}
 
-				if errGET != nil || (errGET == nil && errDEL == nil) || count*interval >= timeout*60 {
+				if errGET != nil || (errGET == nil && errDEL == nil) || count*interval >= timeout*3600 {
 					n, _ := sm.ClientRedis.Client.Exists(sm.ClientRedis.Ctx, "ADMITEE_SMOOTH_DEL_"+namespace+"_"+podName).Result()
 					if n == 0 {
 						//删除RDB记录

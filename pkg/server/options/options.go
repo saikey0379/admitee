@@ -66,5 +66,4 @@ func (o *Options) AddFlags(fs *pflag.FlagSet) {
 	fs.IntVar(&o.RedisPort, "redis-port", 6379, "Redis port.")
 	fs.IntVar(&o.RedisDB, "redis-db", 0, "Redis db number.")
 	fs.StringVar(&o.RedisPassword, "redis-password", "test", "Redis password.")
-
 }

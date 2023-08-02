@@ -2,10 +2,11 @@ package model
 
 import (
 	"context"
-	"github.com/go-redis/redis/v9"
-	"k8s.io/klog/v2"
 	"sync"
 	"time"
+
+	"github.com/go-redis/redis/v9"
+	"github.com/golang/glog"
 )
 
 type AdmiteeRedisClient struct {
@@ -20,7 +21,7 @@ func (c *AdmiteeRedisClient) Lock(key string) bool {
 	defer c.Mutex.Unlock()
 	bool, err := c.Client.SetNX(c.Ctx, key, 1, 10*time.Second).Result()
 	if err != nil {
-		klog.Errorf("FAILURE: Lock[%v]", err)
+		glog.Errorf("FAILURE: Lock[%v]", err)
 	}
 	return bool
 }
@@ -28,7 +29,7 @@ func (c *AdmiteeRedisClient) Lock(key string) bool {
 func (c *AdmiteeRedisClient) UnLock(key string) int64 {
 	nums, err := c.Client.Del(c.Ctx, key).Result()
 	if err != nil {
-		klog.Errorf("FAILURE: UnLock[%v]", err)
+		glog.Errorf("FAILURE: UnLock[%v]", err)
 	}
 	return nums
 }

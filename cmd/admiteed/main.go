@@ -6,10 +6,6 @@ import (
 	"fmt"
 	"os"
 
-	"admitee/pkg/server"
-	"admitee/pkg/server/config"
-	"admitee/pkg/server/options"
-
 	"github.com/golang/glog"
 	"github.com/spf13/cobra"
 	"golang.org/x/sync/errgroup"
@@ -17,6 +13,10 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/manager/signals"
+
+	"admitee/pkg/server"
+	"admitee/pkg/server/config"
+	"admitee/pkg/server/options"
 )
 
 // main.
@@ -55,21 +55,31 @@ func NewCommand(ctx context.Context) *cobra.Command {
 func Run(ctx context.Context, opts *options.Options) error {
 	var eg errgroup.Group
 
-	clientKubeDynamic, err := NewClientKubeDynamic()
+	clientRedis, err := opts.NewClientRedis()
 	if err != nil {
-		glog.Errorf("FAILURE: NewClientKubeDynamic[%v]", err)
+		glog.Errorf("FAILURE: NewClientRedis[%v]", err)
 
 		panic(err)
+	} else {
+		glog.Infof("Initial ClientRedis.")
+	}
+
+	clientSmooth, err := NewClientSmooth()
+	if err != nil {
+		glog.Errorf("FAILURE: NewClientSmooth[%v]", err)
+
+		panic(err)
+	} else {
+		glog.Infof("Initial ClientSmooth.")
 	}
 
 	clientKubeSet, err := NewClientKubeSet()
 	if err != nil {
 		glog.Errorf("FAILURE: NewClientKubeSet[%v]", err)
-	}
 
-	clientRedis, err := opts.NewClientRedis()
-	if err != nil {
-		glog.Errorf("FAILURE: NewClientRedis[%v]", err)
+		panic(err)
+	} else {
+		glog.Infof("Initial ClientKubeSet.")
 	}
 
 	eg.Go(func() error {
@@ -78,7 +88,7 @@ func Run(ctx context.Context, opts *options.Options) error {
 		if err := opts.ApplyTo(serverConfig); err != nil {
 			glog.Exit(err)
 		}
-		server, err := server.NewServer(serverConfig, clientKubeDynamic, clientKubeSet, clientRedis)
+		server, err := server.NewServer(serverConfig, clientSmooth, clientKubeSet, clientRedis)
 		if err != nil {
 			glog.Exit(err)
 		}
@@ -94,16 +104,16 @@ func Run(ctx context.Context, opts *options.Options) error {
 	return err
 }
 
-func NewClientKubeDynamic() (dynamic.Interface, error) {
+func NewClientSmooth() (dynamic.Interface, error) {
 	config, err := rest.InClusterConfig()
 	if err != nil {
 		return nil, err
 	}
-	kubeClient, err := dynamic.NewForConfig(config)
+	smooth, err := dynamic.NewForConfig(config)
 	if err != nil {
 		return nil, err
 	}
-	return kubeClient, nil
+	return smooth, nil
 }
 
 func NewClientKubeSet() (*kubernetes.Clientset, error) {

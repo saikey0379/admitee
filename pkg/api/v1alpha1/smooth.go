@@ -6,8 +6,8 @@ import (
 )
 
 const (
-	DefaultInterval = 60
-	DefaultTimeout  = 60
+	DefaultInterval = 60 // seconds, interval for per request
+	DefaultTimeout  = 24 // hours, timeout for per SmoothProcess
 	DefaultPort     = 80
 	DefaultMethod   = "get"
 )

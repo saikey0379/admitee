@@ -27,3 +27,7 @@ func (s *apiServer) HealthCheck(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(status)
 	w.Write(data)
 }
+
+func (s *apiServer) DeamonHealthCheck() {
+	go s.clientRedis.HealthCheckRdb()
+}

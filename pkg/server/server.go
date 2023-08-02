@@ -17,20 +17,20 @@ import (
 )
 
 type apiServer struct {
-	config            *config.Config
-	clientKubeDynamic dynamic.Interface
-	clientKubeSet     *kubernetes.Clientset
-	clientRedis       *model.AdmiteeRedisClient
-	Server            *http.Server
-	stopCh            chan struct{}
+	config        *config.Config
+	clientRedis   *model.AdmiteeRedisClient
+	clientSmooth  dynamic.Interface
+	clientKubeSet *kubernetes.Clientset
+	Server        *http.Server
+	stopCh        chan struct{}
 }
 
-func NewServer(cfg *config.Config, clientKubeDynamic dynamic.Interface, clientKubeSet *kubernetes.Clientset, clientRedis *model.AdmiteeRedisClient) (*apiServer, error) {
+func NewServer(cfg *config.Config, clientSmooth dynamic.Interface, clientKubeSet *kubernetes.Clientset, clientRedis *model.AdmiteeRedisClient) (*apiServer, error) {
 	server := &apiServer{
-		config:            cfg,
-		clientKubeDynamic: clientKubeDynamic,
-		clientKubeSet:     clientKubeSet,
-		clientRedis:       clientRedis,
+		config:        cfg,
+		clientRedis:   clientRedis,
+		clientSmooth:  clientSmooth,
+		clientKubeSet: clientKubeSet,
 	}
 
 	return server, nil
@@ -45,7 +45,7 @@ func (s *apiServer) Run(ctx context.Context) {
 	}
 
 	s.DeamonSmooth()
-	go s.clientRedis.HealthCheckRdb()
+	s.DeamonHealthCheck()
 
 	go func() {
 		s.Server = &http.Server{
@@ -57,6 +57,7 @@ func (s *apiServer) Run(ctx context.Context) {
 
 		// define http server and server handler
 		mux := http.NewServeMux()
+
 		// mux.HandleFunc("/mutate", whsvr.serve)
 		mux.HandleFunc("/admission/smooth", s.Admission)
 		mux.HandleFunc("/healthz", s.HealthCheck)

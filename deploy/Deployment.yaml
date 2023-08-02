@@ -32,6 +32,9 @@ spec:
         - --redis-port=6379
         - --redis-db=0
         - --redis-password=redispassword
+        - --alsologtostderr
+        - --v=7
+        - 2>&1
         livenessProbe:
           httpGet:
             path: /healthz
